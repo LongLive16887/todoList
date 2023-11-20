@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Knockout.js To-Do List</title>
+        <!-- Cdns -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/knockout/3.5.1/knockout-latest.js" integrity="sha512-2AL/VEauKkZqQU9BHgnv48OhXcJPx9vdzxN1JrKDVc4FPU/MEE/BZ6d9l0mP7VmvLsjtYwqiYQpDskK9dG8KBA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    </head>
+    <body>
+        <div class="container mt-5">
+            <h2>Список задач</h2>
+            
+            <!-- Форма -->
+            <form data-bind="submit: addTask">
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" placeholder="Добавить новую задачу" data-bind="value: newTask, valueUpdate: 'afterkeydown'">
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" type="submit">Добавить</button>
+                    </div>
+                </div>
+            </form>
+
+            <!-- Список задач -->
+            <ul class="list-group" data-bind="foreach: tasks">
+                <li class="list-group-item">
+                    <input type="checkbox" data-bind="checked: completed">
+                    <span data-bind="text: title, css: { 'completed-task': completed }"></span>
+                    <button class="btn btn-danger btn-sm float-right" data-bind="click: $parent.removeTask">Удалить</button>
+                </li>
+            </ul>
+        </div>
+
+        <script>
+            function Task(title, completed) {
+                this.title = ko.observable(title);
+                this.completed = ko.observable(completed || false);
+            }
+        
+            function TaskListViewModel() {
+                var self = this;
+                self.tasks = ko.observableArray([]);
+        
+                // Загрузка данных из localStorage
+                var storedTasks = localStorage.getItem('tasks');
+                if (storedTasks) {
+                    var parsedTasks = JSON.parse(storedTasks);
+                    parsedTasks.forEach(function (task) {
+                        self.tasks.push(new Task(task.title, task.completed));
+                    });
+                } else {
+                    // Если данных в localStorage нет, добавляем начальные задачи
+                    self.tasks.push(new Task("Выучить Knockout.js"));
+                    self.tasks.push(new Task("Разработать приложение"));
+                    self.tasks.push(new Task("Проверить результат"));
+                }
+
+                self.newTask = ko.observable("");
+        
+                // Добавление задачи
+                self.addTask = function () {
+                    if (self.newTask()) {
+                        self.tasks.push(new Task(self.newTask()));
+                        self.newTask("");
+                    }
+                };
+        
+                // Удаление задачи
+                self.removeTask = function (task) {
+                    self.tasks.remove(task);
+                };
+
+                // Отслеживание изменений в completed и сохранение в localStorage
+                self.observeCompleted = ko.computed(function () {
+                    localStorage.setItem('tasks', ko.toJSON(self.tasks()));
+                }).extend({ throttle: 500 }); 
+
+                // Убедимся, что при изменении completed также обновляется localStorage
+                self.tasks.subscribe(function () {
+                    self.observeCompleted();
+                });
+            }
+
+            ko.applyBindings(new TaskListViewModel());
+        </script>
+    </body>
+</html>
